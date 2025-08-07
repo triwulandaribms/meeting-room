@@ -17,13 +17,9 @@ public class BookingController {
     public ResponseEntity<?> addBooking(@RequestBody BookingReq req) {
         return bookingService.addBooking(req);
     }
-
     @GetMapping("/list-summary")
-    public ResponseEntity<?> listSummaryBooking(
-        @RequestParam(required = false) String bookingDate,
-        @RequestParam(defaultValue = "10") int limit,
-        @RequestParam(defaultValue = "1") int page
-    ) {
-        return bookingService.listSummaryBooking(bookingDate, limit, page);
+    public ResponseEntity<?> listSummaryBooking(@RequestParam String bookingDate) {
+        return bookingService.listSummaryBooking(bookingDate);
     }
+    
 }

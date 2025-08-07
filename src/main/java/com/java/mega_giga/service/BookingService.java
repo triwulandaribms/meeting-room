@@ -1,6 +1,5 @@
 package com.java.mega_giga.service;
 
-import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
@@ -21,8 +20,6 @@ import com.java.mega_giga.model.response.BookingResponseDto;
 import com.java.mega_giga.repository.BookingConsumptionRepository;
 import com.java.mega_giga.repository.BookingRepository;
 import com.java.mega_giga.repository.MasterJenisKonsumsiRepository;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import java.util.*;
 
 @Service
@@ -126,24 +123,22 @@ public class BookingService {
         }
     }
 
-    public ResponseEntity<?> listSummaryBooking(String bookingDate, int limit, int page) {
+    public ResponseEntity<?> listSummaryBooking(String bookingDate) {
         try {
-            Pageable pageable = PageRequest.of(page - 1, limit);
-            List<Booking> bookings;
-            long totalData;
-    
+            List<Booking> bookings = new ArrayList<>();
             ZoneId zoneJakarta = ZoneId.of("Asia/Jakarta");
     
             if (bookingDate != null && !bookingDate.isEmpty()) {
                 YearMonth ym = YearMonth.parse(bookingDate);
-                LocalDateTime startDate = ym.atDay(1).atStartOfDay();
-                LocalDateTime endDate = ym.atEndOfMonth().atTime(23, 59, 59);
+                ZonedDateTime startDate = ym.atDay(1).atStartOfDay(zoneJakarta);
+                ZonedDateTime endDate = ym.atEndOfMonth().atTime(23, 59, 59).atZone(zoneJakarta);
     
-                bookings = bookingRepository.findAllWithConsumptionsBetween(startDate, endDate, pageable);
-                totalData = bookingRepository.countAllByBookingDateBetween(startDate, endDate);
+                bookings = bookingRepository.findAllWithConsumptionsBetween(
+                    startDate.toOffsetDateTime(),
+                    endDate.toOffsetDateTime()
+                );
             } else {
-                bookings = bookingRepository.findAll(pageable).getContent();
-                totalData = bookingRepository.count();
+                return ResponseEntity.badRequest().body(Map.of("message", "Parameter bookingDate diperlukan."));
             }
     
             Map<String, Integer> harga = Map.of(
@@ -158,72 +153,65 @@ public class BookingService {
                 String office = booking.getOfficeName();
                 String room = booking.getRoomName();
                 String yearMonth = booking.getBookingDate()
-                .atZoneSameInstant(zoneJakarta)
-                .format(DateTimeFormatter.ofPattern("yyyy-MM"));
-            
+                    .atZoneSameInstant(zoneJakarta)
+                    .format(DateTimeFormatter.ofPattern("yyyy-MM"));
+    
                 result
                     .computeIfAbsent(yearMonth, ym -> new LinkedHashMap<>())
                     .computeIfAbsent(office, o -> new LinkedHashMap<>())
-                    .computeIfAbsent(room, r -> new ArrayList<>());
+                    .computeIfAbsent(room, r -> {
+                        Map<String, Object> defaultData = new LinkedHashMap<>();
+                        defaultData.put("presentasi pemakaian", "0%");
+                        defaultData.put("nominal konsumsi", 0);
+    
+                        Map<String, Integer> detailKonsumsi = new LinkedHashMap<>();
+                        detailKonsumsi.put("snack siang", 0);
+                        detailKonsumsi.put("makan siang", 0);
+                        detailKonsumsi.put("snack sore", 0);
+                        defaultData.put("detail konsumsi", detailKonsumsi);
+    
+                        return new ArrayList<>(List.of(defaultData));
+                    });
     
                 List<Map<String, Object>> dataList = result.get(yearMonth).get(office).get(room);
-    
-                if (dataList.isEmpty()) {
-                    Map<String, Object> defaultData = new LinkedHashMap<>();
-                    defaultData.put("presentasi pemakaian", "0%");
-                    defaultData.put("nominal konsumsi", 0);
-    
-                    Map<String, Integer> breakdown = new LinkedHashMap<>();
-                    breakdown.put("snack siang", 0);
-                    breakdown.put("makan siang", 0);
-                    breakdown.put("snack sore", 0);
-    
-                    defaultData.put("breakdown", breakdown);
-                    dataList.add(defaultData);
-                }
-    
                 Map<String, Object> current = dataList.get(0);
-                Map<String, Integer> breakdown = (Map<String, Integer>) current.get("breakdown");
+    
+                @SuppressWarnings("unchecked")
+                Map<String, Integer> detailKonsumsi = (Map<String, Integer>) current.get("detail konsumsi");
+    
                 int nominalKonsumsi = (int) current.get("nominal konsumsi");
     
                 for (BookingConsumption konsumsi : booking.getBookingConsumptions()) {
                     String jenis = konsumsi.getJenisKonsumsi().getName();
-                    int jumlahPeserta = booking.getParticipants();
+                    int peserta = booking.getParticipants();
     
                     switch (jenis) {
                         case "Snack Siang" -> {
-                            breakdown.compute("snack siang", (k, v) -> v + jumlahPeserta);
-                            nominalKonsumsi += jumlahPeserta * harga.get("Snack Siang");
+                            detailKonsumsi.compute("snack siang", (k, v) -> v + peserta);
+                            nominalKonsumsi += peserta * harga.get("Snack Siang");
                         }
                         case "Makan Siang" -> {
-                            breakdown.compute("makan siang", (k, v) -> v + jumlahPeserta);
-                            nominalKonsumsi += jumlahPeserta * harga.get("Makan Siang");
+                            detailKonsumsi.compute("makan siang", (k, v) -> v + peserta);
+                            nominalKonsumsi += peserta * harga.get("Makan Siang");
                         }
                         case "Snack Sore" -> {
-                            breakdown.compute("snack sore", (k, v) -> v + jumlahPeserta);
-                            nominalKonsumsi += jumlahPeserta * harga.get("Snack Sore");
+                            detailKonsumsi.compute("snack sore", (k, v) -> v + peserta);
+                            nominalKonsumsi += peserta * harga.get("Snack Sore");
                         }
                     }
                 }
     
-                int totalPeserta = breakdown.values().stream().mapToInt(Integer::intValue).sum();
-                int kapasitas = 100; 
-                String presentasePemakaian = kapasitas > 0
+                int totalPeserta = detailKonsumsi.values().stream().mapToInt(Integer::intValue).sum();
+                int kapasitas = 100;
+                String presentase = kapasitas > 0
                     ? String.format("%.1f%%", (totalPeserta * 100.0 / kapasitas))
                     : "0%";
     
-                current.put("presentasi pemakaian", presentasePemakaian);
+                current.put("presentasi pemakaian", presentase);
                 current.put("nominal konsumsi", nominalKonsumsi);
             }
     
-            Map<String, Object> response = new LinkedHashMap<>();
-            response.put("currentPage", page);
-            response.put("perPage", limit);
-            response.put("totalData", totalData);
-            response.put("totalPage", (int) Math.ceil((double) totalData / limit));
-            response.put("data", result);
-    
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(Map.of("data", result));
     
         } catch (Exception e) {
             e.printStackTrace();
@@ -234,6 +222,4 @@ public class BookingService {
         }
     }
     
-
-
 }
