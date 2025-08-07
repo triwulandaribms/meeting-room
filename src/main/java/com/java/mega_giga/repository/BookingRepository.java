@@ -12,14 +12,10 @@ import java.util.List;
 @Repository
 public interface BookingRepository extends JpaRepository<Booking, Integer> {
 
-    @Query("""
-    SELECT b FROM Booking b
-    LEFT JOIN FETCH b.bookingConsumptions bc
-    WHERE b.bookingDate BETWEEN :startDate AND :endDate
-""")
-List<Booking> findAllWithConsumptionsBetween(
-    @Param("startDate") OffsetDateTime startDate,
-    @Param("endDate") OffsetDateTime endDate
-);
+    @Query("SELECT b FROM Booking b LEFT JOIN FETCH b.bookingConsumptions bc WHERE b.bookingDate BETWEEN :startDate AND :endDate")
+    
+    List<Booking> findAllWithConsumptionsBetween(
+            @Param("startDate") OffsetDateTime startDate,
+            @Param("endDate") OffsetDateTime endDate);
 
 }
