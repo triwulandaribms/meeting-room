@@ -6,6 +6,4 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface OfficeRepository extends JpaRepository<Office, Integer> {
-    // Tambahkan custom query jika diperlukan, contoh:
-    // List<Office> findByRoomNameContaining(String keyword);
 }
