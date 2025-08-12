@@ -13,10 +13,10 @@
     </parent>
 
     <groupId>com.java</groupId>
-    <artifactId>mega-giga</artifactId>
+    <artifactId>meeting-room</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>mega-giga</name>
-    <description>Project Mega Giga Solusindo</description>
+    <name>meeting-room</name>
+    <description>Project Booking Meeting Room</description>
 
     <properties>
         <java.version>21</java.version>
@@ -83,20 +83,6 @@
                         </goals>
                     </execution>
                 </executions>
-            </plugin>
-
-            <plugin>
-                <groupId>org.flywaydb</groupId>
-                <artifactId>flyway-maven-plugin</artifactId>
-                <version>10.14.0</version>
-                <configuration>
-                    <url>${env.SPRING_DATASOURCE_URL}</url>
-                    <user>${env.SPRING_DATASOURCE_USERNAME}</user>
-                    <password>${env.SPRING_DATASOURCE_PASSWORD}</password>
-                    <locations>
-                        <location>filesystem:tools/db/migration</location>
-                    </locations>
-                </configuration>
             </plugin>
 
             <plugin>
