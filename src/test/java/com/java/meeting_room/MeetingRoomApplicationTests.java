@@ -1,10 +1,10 @@
-package com.java.mega_giga;
+package com.java.meeting_room;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class MegaGigaApplicationTests {
+class MeetingRoomApplicationTests {
 
 	@Test
 	void contextLoads() {
