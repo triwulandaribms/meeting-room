@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 
 import com.java.meeting_room.entity.MasterJenisKonsumsi;
 import com.java.meeting_room.model.request.MasterJenisKonsumsiReq;
+import com.java.meeting_room.model.response.JenisKonsumsiDto;
 
 @Repository
 public interface MasterJenisKonsumsiRepository extends JpaRepository<MasterJenisKonsumsi, Integer> {
@@ -20,11 +21,16 @@ public interface MasterJenisKonsumsiRepository extends JpaRepository<MasterJenis
     @Query("SELECT jk.name AS name, jk.maxPrice AS maxPrice FROM MasterJenisKonsumsi jk")
     List<MasterJenisKonsumsiReq> findAllNameAndPrice();
 
-    @Query("SELECT jk.name FROM MasterJenisKonsumsi jk WHERE LOWER(jk.name) = LOWER(:name) AND jk.deletedAt IS NULL")
+    @Query("SELECT jk.name FROM MasterJenisKonsumsi jk " +
+            " WHERE LOWER(jk.name) = LOWER(:name) " + 
+            " AND jk.deletedAt IS NULL")
     List<String> cekName(@Param("name") String name);
     
-    @Query("SELECT jk FROM MasterJenisKonsumsi jk WHERE jk.deletedAt IS NULL")
-    List<MasterJenisKonsumsi> findAllActive();
+    @Query("SELECT new com.java.meeting_room.model.response.JenisKonsumsiDto ( " + 
+                "jk.id, jk.name, jk.maxPrice ) " +
+                "FROM MasterJenisKonsumsi jk " + 
+                "WHERE jk.deletedAt IS NULL")
+    List<JenisKonsumsiDto> findAllActive();
 
     @Query("SELECT jk FROM MasterJenisKonsumsi jk WHERE jk.id = :id AND jk.deletedAt IS NULL")
     Optional<MasterJenisKonsumsi> findActiveById(@Param("id") Integer id);
