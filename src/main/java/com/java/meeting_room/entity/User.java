@@ -1,6 +1,5 @@
 package com.java.meeting_room.entity;
 
-
 import jakarta.persistence.*;
 import java.time.OffsetDateTime;
 
@@ -9,15 +8,19 @@ import java.time.OffsetDateTime;
 public class User {
 
     public enum Role {
-        ADMIN, USER, UNKNOWN;
+        ADMIN, USER;
 
         public static Role fromString(String str) {
-            for (Role role : Role.values()) {
-                if (role.name().equalsIgnoreCase(str)) {
-                    return role;
-                }
+            if (str == null)
+                return null;
+            switch (str.toUpperCase()) {
+                case "ADMIN":
+                    return ADMIN;
+                case "USER":
+                    return USER;
+                default:
+                    return null;
             }
-            return UNKNOWN;
         }
     }
 
@@ -67,7 +70,6 @@ public class User {
         this.createdBy = createdBy;
         this.createdAt = OffsetDateTime.now();
     }
-
 
     public Long getId() {
         return id;

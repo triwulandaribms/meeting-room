@@ -8,6 +8,18 @@ import org.springframework.http.ResponseEntity;
 
 public record Response<T>(int code, String message, T data) {
 
+    public static <T> ResponseEntity<Response<T>> responseUnauthenticated(String message) {
+        return ResponseEntity
+                .status(401)
+                .body(new Response<>(401, message != null ? message : "Unauthenticated", null));
+    }
+    
+    public static <T> ResponseEntity<Response<T>> responseUnauthorized(String message) {
+        return ResponseEntity
+                .status(403)
+                .body(new Response<>(403, message != null ? message : "Unauthorized", null));
+    }    
+
     public static <T> ResponseEntity<Response<Map<String, Object>>> responseSuksesList(T data) {
         Map<String, Object> dataList = new HashMap<>();
         dataList.put("list", data);
