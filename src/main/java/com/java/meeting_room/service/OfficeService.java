@@ -93,27 +93,61 @@ public class OfficeService {
         }
     }
 
-    public ResponseEntity<?> editOffice(){
+    public ResponseEntity<?> updateOffice(Integer id, OfficeReq req) {
         try {
-            
+            if (req.roomName() == null || req.id_master_office() == null) {
+                return Response.responseBadRequest("field wajib diisi.");
+            }
+
+            Optional<Office> cekIdOffice = officeRepo.findOfficeById(id);
+            if (cekIdOffice.isEmpty()) {
+                return Response.responseBadRequest("Office dengan id " + id + " tidak ditemukan.");
+            }
+
+            Optional<MasterOffice> cekIdMasterOffice = masterOfficeRepo.findMasterOfficeById(req.id_master_office());
+            if (cekIdMasterOffice.isEmpty()) {
+                return Response
+                        .responseBadRequest("MasterOffice dengan id " + req.id_master_office() + " tidak ditemukan.");
+            }
+
+            Office office = cekIdOffice.get();
+            office.setRoomName(req.roomName().trim());
+            office.setMasterOffice(cekIdMasterOffice.get());
+            office.setUpdatedAt(LocalDateTime.now());
+
+            Office saved = officeRepo.save(office);
+
+            return Response.responseSukses(Map.of(
+                    "id", saved.getId(),
+                    "roomName", saved.getRoomName(),
+                    "id_master_office", saved.getMasterOffice().getId()), "Data office berhasil diupdate");
+
         } catch (Exception e) {
+            return Response.responseError(
+                    Map.of("error", e.getMessage()),
+                    500,
+                    "Terjadi kesalahan pada server");
         }
     }
 
-    public ResponseEntity<?> hapusOffice(){
-        try {
-            
-        } catch (Exception e) {
-            // TODO: handle exception
-        }
-    }
+    // public ResponseEntity<?> hapusOffice(){
+    // try {
 
-    public ResponseEntity<?> listOffice(){
-        try {
-            
-        } catch (Exception e) {
-            // TODO: handle exception
-        }
-    }
+    // } catch (Exception e) {
+    // // TODO: handle exception
+    // }
+    // }
+
+    // public ResponseEntity<?> listOffice() {
+    //     try {
+
+    //     } catch (Exception e) {
+    //         return Response.responseError(
+    //                 Map.of("error", e.getMessage()),
+    //                 500,
+    //                 "Terjadi kesalahan pada server");
+
+    //     }
+    // }
 
 }

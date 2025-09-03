@@ -3,6 +3,7 @@ package com.java.meeting_room.service;
 import com.java.meeting_room.entity.MasterJenisKonsumsi;
 import com.java.meeting_room.model.Response;
 import com.java.meeting_room.model.request.MasterJenisKonsumsiReq;
+import com.java.meeting_room.model.response.JenisKonsumsiDto;
 import com.java.meeting_room.repository.MasterJenisKonsumsiRepository;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,13 +11,33 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+
 
 @Service
 public class JenisKonsumsiService {
 
     @Autowired
-    private MasterJenisKonsumsiRepository repository;
+    private MasterJenisKonsumsiRepository masterJenisKonsumsiRepo;
+
+
+    public ResponseEntity<?> listJenisKonsumsi() {
+        try {
+
+            List<JenisKonsumsiDto> list = masterJenisKonsumsiRepo.findAllActive();
+
+            return Response.responseSuksesList(list);
+
+        } catch (Exception e) {
+            return Response.responseError(
+                    Map.of("error", e.getMessage()),
+                    500,
+                    "Terjadi kesalahan pada server"
+            );
+        }
+    }
 
     public ResponseEntity<?> addJenisKonsumsi(MasterJenisKonsumsiReq req) {
         try {
@@ -28,7 +49,7 @@ public class JenisKonsumsiService {
                 return Response.responseBadRequest("Harga maksimum tidak boleh kosong");
             }
 
-            if (!repository.cekName(req.name().trim()).isEmpty()) {
+            if (!masterJenisKonsumsiRepo.cekName(req.name().trim()).isEmpty()) {
                 return Response.responseBadRequest("Nama jenis konsumsi sudah ada");
             }
 
@@ -37,7 +58,7 @@ public class JenisKonsumsiService {
             jenisKonsumsi.setMaxPrice(req.maxPrice());
             jenisKonsumsi.setCreatedAt(LocalDateTime.now());
 
-            MasterJenisKonsumsi saved = repository.save(jenisKonsumsi);
+            MasterJenisKonsumsi saved = masterJenisKonsumsiRepo.save(jenisKonsumsi);
 
             return Response.responseCreateSukses(Map.of(
                     "id", saved.getId(),
@@ -60,12 +81,12 @@ public class JenisKonsumsiService {
                 return Response.responseBadRequest("Harga maksimum tidak boleh kosong");
             }
 
-            var cekId = repository.findById(id);
+            var cekId = masterJenisKonsumsiRepo.findById(id);
             if (cekId.isEmpty()) {
                 return Response.responseBadRequest("Data jenis konsumsi dengan ID tersebut tidak ditemukan");
             }
 
-            if (!repository.cekName(req.name().trim()).isEmpty()) {
+            if (!masterJenisKonsumsiRepo.cekName(req.name().trim()).isEmpty()) {
                 return Response.responseBadRequest("Nama jenis konsumsi sudah ada");
             }
 
@@ -73,7 +94,7 @@ public class JenisKonsumsiService {
             jenisKonsumsi.setName(req.name().trim());
             jenisKonsumsi.setMaxPrice(req.maxPrice());
 
-            MasterJenisKonsumsi saved = repository.save(jenisKonsumsi);
+            MasterJenisKonsumsi saved = masterJenisKonsumsiRepo.save(jenisKonsumsi);
 
             return Response.responseSukses(Map.of(
                     "id", saved.getId(),
@@ -86,34 +107,31 @@ public class JenisKonsumsiService {
         }
     }
 
-    // public ResponseEntity<?> deleteJenisKonsumsi(MasterJenisKonsumsiReq req) {
-        
-    //     try {
-    //         var dataOpt = repository.findActiveById(req.id());
-    //         if (dataOpt.isEmpty()) {
-    //             return Response.responseBadRequest("Data jenis konsumsi tidak ditemukan atau sudah dihapus");
-    //         }
-
-    //         var data = dataOpt.get();
-    //         data.getDeletedAt();
-    //         repository.save(data);
-
-    //         return Response.responseSukses("Data jenis konsumsi berhasil dihapus (soft delete)", null);
-    //     } catch (Exception e) {
-    //         return Response.responseError(
-    //             Map.of("error", e.getMessage()), 500, "Terjadi kesalahan pada server");        
-    //     }
-    // }
-
-    public ResponseEntity<?> listJenisKonsumsi() {
+    public ResponseEntity<?> deleteJenisKonsumsi(Integer id) {
         try {
-            var list = repository.findAllActive();
-            return Response.responseSuksesList(list);
+            Optional<MasterJenisKonsumsi> cekData = masterJenisKonsumsiRepo.findActiveById(id);
+    
+            if (cekData.isEmpty()) {
+                return Response.responseBadRequest("Data jenis konsumsi tidak ditemukan atau sudah dihapus");
+            }
+    
+            MasterJenisKonsumsi data = cekData.get();
+            data.setDeletedAt(LocalDateTime.now());
+            masterJenisKonsumsiRepo.save(data);
+    
+            return Response.responseSukses("Data jenis konsumsi berhasil dihapus", null);
         } catch (Exception e) {
             return Response.responseError(
-                Map.of("error", e.getMessage()), 500, "Terjadi kesalahan pada server");        
-
+                    Map.of("error", e.getMessage()),
+                    500,
+                    "Terjadi kesalahan pada server"
+            );
         }
-
     }
+    
+
+    
+    
+    
+
 }

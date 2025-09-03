@@ -14,6 +14,12 @@ public class JenisKonsumsiController {
     @Autowired
     private JenisKonsumsiService jenisKonsumsiService;
 
+
+    @GetMapping("/list")
+    public ResponseEntity<?> listJenisKonsumsi() {
+        return jenisKonsumsiService.listJenisKonsumsi();
+    }
+
     @PostMapping("/add")
     public ResponseEntity<?> addJenisKonsumsi(@RequestBody MasterJenisKonsumsiReq req) {
         return jenisKonsumsiService.addJenisKonsumsi(req);
@@ -26,14 +32,10 @@ public class JenisKonsumsiController {
         return jenisKonsumsiService.updateJenisKonsumsi(id, req);
     }
 
-    // @DeleteMapping("/delete")
-    // public ResponseEntity<?> deleteJenisKonsumsi(@RequestBody MasterJenisKonsumsiReq req) {
-    //     return jenisKonsumsiService.deleteJenisKonsumsi(req);
-    // }
-
-    @GetMapping("/list")
-    public ResponseEntity<?> listJenisKonsumsi() {
-        return jenisKonsumsiService.listJenisKonsumsi();
+    @DeleteMapping("/delete/{id}")
+    public ResponseEntity<?> deleteJenisKonsumsi(@PathVariable Integer id) {
+        return jenisKonsumsiService.deleteJenisKonsumsi(id);
     }
+    
 
 }
