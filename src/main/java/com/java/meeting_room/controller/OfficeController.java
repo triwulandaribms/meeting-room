@@ -15,11 +15,11 @@ public class OfficeController {
     @Autowired
     private OfficeService officeService;
 
-     // @GetMapping("/list")
-    // public ResponseEntity<?> listOffice() {
-    //     return officeService.listOffice();
-    // }
-    
+    @GetMapping("/list")
+    public ResponseEntity<?> listOffice() {
+        return officeService.listOffice();
+    }
+ 
     @PostMapping("/add-master")
     public ResponseEntity<?> addMasterOffice(@RequestBody MasterOfficeReq req) {
         return officeService.addMasterOffice(req);

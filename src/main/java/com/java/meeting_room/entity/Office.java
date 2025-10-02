@@ -45,7 +45,6 @@ public class Office {
         this.masterOffice = masterOffice;
     }
 
-
     public Integer getId() {
         return id;
     }

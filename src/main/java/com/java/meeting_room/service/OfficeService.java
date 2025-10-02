@@ -3,6 +3,7 @@ package com.java.meeting_room.service;
 import com.java.meeting_room.model.Response;
 import com.java.meeting_room.model.request.MasterOfficeReq;
 import com.java.meeting_room.model.request.OfficeReq;
+import com.java.meeting_room.model.response.officeDto;
 import com.java.meeting_room.entity.MasterOffice;
 import com.java.meeting_room.entity.Office;
 import com.java.meeting_room.repository.MasterOfficeRepository;
@@ -23,6 +24,21 @@ public class OfficeService {
 
     @Autowired
     private OfficeRepository officeRepo;
+
+    public ResponseEntity<?> listOffice() {
+        try {
+
+            List<officeDto> list = officeRepo.findAllOfficeActive();
+
+            return Response.responseSuksesList(list);
+
+        } catch (Exception e) {
+            return Response.responseError(
+                    Map.of("error", e.getMessage()),
+                    500,
+                    "Terjadi kesalahan pada server");
+        }
+    }
 
     public ResponseEntity<?> addMasterOffice(MasterOfficeReq req) {
         try {
@@ -130,24 +146,5 @@ public class OfficeService {
         }
     }
 
-    // public ResponseEntity<?> hapusOffice(){
-    // try {
-
-    // } catch (Exception e) {
-    // // TODO: handle exception
-    // }
-    // }
-
-    // public ResponseEntity<?> listOffice() {
-    //     try {
-
-    //     } catch (Exception e) {
-    //         return Response.responseError(
-    //                 Map.of("error", e.getMessage()),
-    //                 500,
-    //                 "Terjadi kesalahan pada server");
-
-    //     }
-    // }
-
 }
+ 
