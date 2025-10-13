@@ -5,16 +5,11 @@ import com.java.meeting_room.model.Response;
 import com.java.meeting_room.model.request.MasterJenisKonsumsiReq;
 import com.java.meeting_room.model.response.JenisKonsumsiDto;
 import com.java.meeting_room.repository.MasterJenisKonsumsiRepository;
-
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
+import java.util.*;
 
 @Service
 public class JenisKonsumsiService {
@@ -22,111 +17,78 @@ public class JenisKonsumsiService {
     @Autowired
     private MasterJenisKonsumsiRepository masterJenisKonsumsiRepo;
 
-
-    public ResponseEntity<?> listJenisKonsumsi() {
+    public Response<Object> listJenisKonsumsi() {
         try {
-
             List<JenisKonsumsiDto> list = masterJenisKonsumsiRepo.findAllActive();
-
-            return Response.responseSuksesList(list);
-
+            if (list == null || list.isEmpty()) {
+                return Response.create("06", "04", "Data tidak ditemukan", null);
+            }
+            return Response.create("06", "00", "Sukses", Map.of("list", list));
         } catch (Exception e) {
-            return Response.responseError(
-                    Map.of("error", e.getMessage()),
-                    500,
-                    "Terjadi kesalahan pada server"
-            );
+            return Response.create("06", "99", "Terjadi kesalahan server: " + e.getMessage(), null);
         }
     }
 
-    public ResponseEntity<?> addJenisKonsumsi(MasterJenisKonsumsiReq req) {
+    public Response<Object> addJenisKonsumsi(MasterJenisKonsumsiReq req) {
         try {
-
-            if (req.name() == null || req.name().trim().isEmpty()) {
-                return Response.responseBadRequest("Nama jenis konsumsi tidak boleh kosong");
-            }
-            if (req.maxPrice() == null) {
-                return Response.responseBadRequest("Harga maksimum tidak boleh kosong");
+            if (req.name() == null || req.name().isBlank() || req.maxPrice() == null) {
+                return Response.badRequest();
             }
 
             if (!masterJenisKonsumsiRepo.cekName(req.name().trim()).isEmpty()) {
-                return Response.responseBadRequest("Nama jenis konsumsi sudah ada");
+                return Response.create("06", "02", "Nama jenis konsumsi sudah ada", null);
             }
 
-            MasterJenisKonsumsi jenisKonsumsi = new MasterJenisKonsumsi();
-            jenisKonsumsi.setName(req.name().trim());
-            jenisKonsumsi.setMaxPrice(req.maxPrice());
-            jenisKonsumsi.setCreatedAt(LocalDateTime.now());
+            MasterJenisKonsumsi konsumsi = new MasterJenisKonsumsi();
+            konsumsi.setName(req.name().trim());
+            konsumsi.setMaxPrice(req.maxPrice());
+            konsumsi.setCreatedAt(LocalDateTime.now());
 
-            MasterJenisKonsumsi saved = masterJenisKonsumsiRepo.save(jenisKonsumsi);
+            MasterJenisKonsumsi saved = masterJenisKonsumsiRepo.save(konsumsi);
 
-            return Response.responseCreateSukses(Map.of(
+            Map<String, Object> data = Map.of(
                     "id", saved.getId(),
                     "name", saved.getName(),
-                    "maxPrice", saved.getMaxPrice(),
-                    "createdAt", saved.getCreatedAt()));
+                    "maxPrice", saved.getMaxPrice());
 
+            return Response.create("06", "00", "Sukses menambahkan jenis konsumsi", data);
         } catch (Exception e) {
-            return Response.responseError(
-                    Map.of("error", e.getMessage()), 500, "Terjadi kesalahan pada server");
+            return Response.create("06", "99", "Terjadi kesalahan server: " + e.getMessage(), null);
         }
     }
 
-    public ResponseEntity<?> updateJenisKonsumsi(Integer id, MasterJenisKonsumsiReq req) {
+    public Response<Object> updateJenisKonsumsi(Integer id, MasterJenisKonsumsiReq req) {
         try {
-            if (req.name() == null || req.name().trim().isEmpty()) {
-                return Response.responseBadRequest("Nama jenis konsumsi tidak boleh kosong");
-            }
-            if (req.maxPrice() == null) {
-                return Response.responseBadRequest("Harga maksimum tidak boleh kosong");
+            Optional<MasterJenisKonsumsi> dataOpt = masterJenisKonsumsiRepo.findById(id);
+            if (dataOpt.isEmpty()) {
+                return Response.create("06", "04", "Data jenis konsumsi tidak ditemukan", null);
             }
 
-            var cekId = masterJenisKonsumsiRepo.findById(id);
-            if (cekId.isEmpty()) {
-                return Response.responseBadRequest("Data jenis konsumsi dengan ID tersebut tidak ditemukan");
-            }
+            MasterJenisKonsumsi konsumsi = dataOpt.get();
+            konsumsi.setName(req.name());
+            konsumsi.setMaxPrice(req.maxPrice());
+            masterJenisKonsumsiRepo.save(konsumsi);
 
-            if (!masterJenisKonsumsiRepo.cekName(req.name().trim()).isEmpty()) {
-                return Response.responseBadRequest("Nama jenis konsumsi sudah ada");
-            }
-
-            MasterJenisKonsumsi jenisKonsumsi = cekId.get();
-            jenisKonsumsi.setName(req.name().trim());
-            jenisKonsumsi.setMaxPrice(req.maxPrice());
-
-            MasterJenisKonsumsi saved = masterJenisKonsumsiRepo.save(jenisKonsumsi);
-
-            return Response.responseSukses(Map.of(
-                    "id", saved.getId(),
-                    "name", saved.getName(),
-                    "maxPrice", saved.getMaxPrice()), "Data jenis konsumsi berhasil diupdate");
-
+            return Response.create("06", "00", "Sukses update jenis konsumsi", konsumsi);
         } catch (Exception e) {
-            return Response.responseError(
-                    Map.of("error", e.getMessage()), 500, "Terjadi kesalahan pada server");
+            return Response.create("06", "99", "Terjadi kesalahan server: " + e.getMessage(), null);
         }
     }
 
-    public ResponseEntity<?> deleteJenisKonsumsi(Integer id) {
+    public Response<Object> deleteJenisKonsumsi(Integer id) {
         try {
-            Optional<MasterJenisKonsumsi> cekData = masterJenisKonsumsiRepo.findActiveById(id);
-    
-            if (cekData.isEmpty()) {
-                return Response.responseBadRequest("Data jenis konsumsi tidak ditemukan atau sudah dihapus");
+            Optional<MasterJenisKonsumsi> dataOpt = masterJenisKonsumsiRepo.findActiveById(id);
+            if (dataOpt.isEmpty()) {
+                return Response.create("06", "04", "Data tidak ditemukan atau sudah dihapus", null);
             }
-    
-            MasterJenisKonsumsi data = cekData.get();
+
+            MasterJenisKonsumsi data = dataOpt.get();
             data.setDeletedAt(LocalDateTime.now());
             masterJenisKonsumsiRepo.save(data);
-    
-            return Response.responseSukses("Data jenis konsumsi berhasil dihapus", null);
+
+            return Response.create("06", "00", "Data jenis konsumsi berhasil dihapus", null);
         } catch (Exception e) {
-            return Response.responseError(
-                    Map.of("error", e.getMessage()),
-                    500,
-                    "Terjadi kesalahan pada server"
-            );
+            return Response.create("06", "99", "Terjadi kesalahan server: " + e.getMessage(), null);
         }
     }
-
 }

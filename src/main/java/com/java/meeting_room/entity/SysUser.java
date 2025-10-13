@@ -4,8 +4,8 @@ import jakarta.persistence.*;
 import java.time.OffsetDateTime;
 
 @Entity
-@Table(name = "users")
-public class User {
+@Table(name = "sys_users")
+public class SysUser {
 
     public enum Role {
         ADMIN, USER;
@@ -59,10 +59,10 @@ public class User {
     @Column(name = "deleted_at")
     private OffsetDateTime deletedAt;
 
-    public User() {
+    public SysUser() {
     }
 
-    public User(String name, String email, String password, Role role, Long createdBy) {
+    public SysUser(String name, String email, String password, Role role, Long createdBy) {
         this.name = name;
         this.email = email;
         this.password = password;

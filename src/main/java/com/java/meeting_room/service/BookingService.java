@@ -1,22 +1,8 @@
 package com.java.meeting_room.service;
 
-import java.time.OffsetDateTime;
-import java.time.YearMonth;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Service;
-
 import com.java.meeting_room.entity.Booking;
 import com.java.meeting_room.entity.BookingConsumption;
 import com.java.meeting_room.entity.MasterJenisKonsumsi;
-// import com.java.meeting_room.helper.bookingSummaryHelper;
 import com.java.meeting_room.model.Response;
 import com.java.meeting_room.model.request.BookingReq;
 import com.java.meeting_room.model.request.MasterJenisKonsumsiReq;
@@ -25,10 +11,14 @@ import com.java.meeting_room.model.response.SummaryResponseDto;
 import com.java.meeting_room.repository.BookingConsumptionRepository;
 import com.java.meeting_room.repository.BookingRepository;
 import com.java.meeting_room.repository.MasterJenisKonsumsiRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.stereotype.Service;
+
+import java.time.*;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Page;
 
 @Service
 public class BookingService {
@@ -42,47 +32,31 @@ public class BookingService {
     @Autowired
     private BookingConsumptionRepository bookingConsumptionRepository;
 
-    public ResponseEntity<?> addBooking(BookingReq req) {
-        if (req.bookingDate() == null || req.officeName() == null || req.startTime() == null
-                || req.endTime() == null || req.participants() == null || req.roomName() == null) {
-            return Response.responseBadRequest("Semua field wajib diisi.");
+    public Response<Object> addBooking(BookingReq req) {
+
+        if (req.bookingDate() == null || req.officeName() == null ||
+                req.startTime() == null || req.endTime() == null ||
+                req.participants() == null || req.roomName() == null) {
+            return Response.badRequest();
         }
 
         try {
             ZoneId jakartaZone = ZoneId.of("Asia/Jakarta");
-
             OffsetDateTime start = req.startTime().withOffsetSameInstant(ZoneOffset.ofHours(7));
             OffsetDateTime end = req.endTime().withOffsetSameInstant(ZoneOffset.ofHours(7));
             OffsetDateTime bookingDate = req.bookingDate().withOffsetSameInstant(ZoneOffset.ofHours(7));
 
-            ZonedDateTime startJakarta = start.atZoneSameInstant(jakartaZone);
-            ZonedDateTime endJakarta = end.atZoneSameInstant(jakartaZone);
-
-            int startHour = startJakarta.getHour();
-            int endHour = endJakarta.getHour();
-
             Set<String> konsumsiSet = new HashSet<>();
-            boolean cekTime = startHour >= 6 && startHour <= 20 && endHour >= 6 && endHour <= 20;
+            int startHour = start.getHour();
+            int endHour = end.getHour();
 
-            // System.out.println("CEK STARTHOUR: " + startHour);
-            // System.out.println("CEK ENDTIME: " + endHour);
-            // System.out.println("CEK TIME VALID: " + cekTime);
-
-            if (cekTime) {
-                long daysBetween = ChronoUnit.DAYS.between(startJakarta.toLocalDate(), endJakarta.toLocalDate()) + 1;
-
-                if (daysBetween > 1) {
+            if (startHour >= 6 && endHour <= 20) {
+                if (startHour < 12)
                     konsumsiSet.add("Snack Siang");
+                if (endHour >= 13)
                     konsumsiSet.add("Makan Siang");
+                if (endHour >= 16)
                     konsumsiSet.add("Snack Sore");
-                } else {
-                    if (startHour < 12 && endHour >= 7)
-                        konsumsiSet.add("Snack Siang");
-                    if (startHour < 15 && endHour >= 13)
-                        konsumsiSet.add("Makan Siang");
-                    if (startHour <= 19 && endHour >= 16)
-                        konsumsiSet.add("Snack Sore");
-                }
             }
 
             Booking booking = new Booking();
@@ -95,8 +69,6 @@ public class BookingService {
             booking.setCreateAt(OffsetDateTime.now(jakartaZone));
 
             Booking saved = bookingRepository.save(booking);
-
-            // System.out.println("CEK KONSUMSI: " + konsumsiSet);
 
             List<MasterJenisKonsumsi> konsumsiList = konsumsiSet.isEmpty()
                     ? new ArrayList<>()
@@ -122,41 +94,35 @@ public class BookingService {
                     saved.getRoomName(),
                     saved.getParticipants());
 
-            return Response.responseCreateSukses(dto);
-
+            return Response.create("07", "00", "Sukses menambahkan booking", dto);
         } catch (Exception e) {
-            return Response.responseError(null, 500, "Terjadi kesalahan server: " + e.getMessage());
+            return Response.create("07", "99", "Terjadi kesalahan server: " + e.getMessage(), null);
         }
     }
 
-    public ResponseEntity<?> listSummaryBooking(String bookingDate, Integer offset, Integer limit) {
+    public Response<Object> listSummaryBooking(String bookingDate, Integer offset, Integer limit) {
         try {
+            if (bookingDate == null || bookingDate.isEmpty()) {
+                return Response.badRequest();
+            }
+
             if (offset == null || offset < 0)
                 offset = 0;
             if (limit == null || limit < 1)
                 limit = 100;
 
             ZoneId zoneJakarta = ZoneId.of("Asia/Jakarta");
-
-            if (bookingDate == null || bookingDate.isEmpty()) {
-                return Response.responseBadRequest("Tanggal booking wajib diisi");
-            }
-
-            YearMonth ym = YearMonth.parse(bookingDate);
+            YearMonth ym = YearMonth.parse(bookingDate, DateTimeFormatter.ofPattern("yyyy-MM"));
             ZonedDateTime startDate = ym.atDay(1).atStartOfDay(zoneJakarta);
             ZonedDateTime endDate = ym.atEndOfMonth().atTime(23, 59, 59).atZone(zoneJakarta);
 
-            Pageable pageable = PageRequest.of(offset, limit);
-
-            Page<Booking> bookingPage = bookingRepository.findAllWithConsumptionsBetween(
-                    startDate.toOffsetDateTime(),
-                    endDate.toOffsetDateTime(),
-                    pageable);
-
-            List<Booking> bookings = bookingPage.getContent();
+            var pageable = PageRequest.of(offset, limit);
+            var bookingPage = bookingRepository.findAllWithConsumptionsBetween(
+                    startDate.toOffsetDateTime(), endDate.toOffsetDateTime(), pageable);
+            var bookings = bookingPage.getContent();
 
             if (bookings.isEmpty()) {
-                return Response.responseSuksesList(bookings);
+                return Response.create("07", "04", "Data tidak ditemukan", null);
             }
 
             Map<String, Integer> jenisHarga = konsumsiRepository.findAllNameAndPrice()
@@ -165,69 +131,62 @@ public class BookingService {
                             MasterJenisKonsumsiReq::name,
                             MasterJenisKonsumsiReq::maxPrice));
 
-            Map<String, Map<String, Map<String, List<Map<String, Object>>>>> result = new LinkedHashMap<>();
+            Map<String, Map<String, List<Booking>>> grouped = bookings.stream()
+                    .collect(Collectors.groupingBy(
+                            Booking::getOfficeName,
+                            LinkedHashMap::new,
+                            Collectors.groupingBy(Booking::getRoomName)));
 
-            for (Booking booking : bookings) {
+            Map<String, Object> result = new LinkedHashMap<>();
 
-                String office = booking.getOfficeName();
-                String room = booking.getRoomName();
-                String yearMonthStr = booking.getBookingDate()
-                        .atZoneSameInstant(zoneJakarta)
-                        .format(DateTimeFormatter.ofPattern("yyyy-MM"));
+            grouped.forEach((office, roomMap) -> {
+                Map<String, Object> roomSummary = new LinkedHashMap<>();
 
-                if (!result.containsKey(yearMonthStr)) {
-                    result.put(yearMonthStr, new LinkedHashMap<>());
-                }
-                if (!result.get(yearMonthStr).containsKey(office)) {
-                    result.get(yearMonthStr).put(office, new LinkedHashMap<>());
-                }
-                if (!result.get(yearMonthStr).get(office).containsKey(room)) {
-                    List<Map<String, Object>> list = new ArrayList<>();
-                    Map<String, Object> initial = new LinkedHashMap<>();
-                    initial.put("presentasi pemakaian", "0%");
-                    initial.put("nominal konsumsi", 0);
-                    initial.put("detail konsumsi", new LinkedHashMap<String, Integer>());
-                    list.add(initial);
-                    result.get(yearMonthStr).get(office).put(room, list);
-                }
+                roomMap.forEach((room, roomBookings) -> {
+                    int totalParticipants = roomBookings.stream()
+                            .mapToInt(Booking::getParticipants)
+                            .sum();
 
-                List<Map<String, Object>> dataList = result.get(yearMonthStr).get(office).get(room);
-                Map<String, Object> current = dataList.get(0);
+                    Map<String, Long> konsumsiCount = roomBookings.stream()
+                            .flatMap(b -> b.getBookingConsumptions().stream())
+                            .collect(Collectors.groupingBy(
+                                    bc -> bc.getJenisKonsumsi().getName(),
+                                    Collectors.counting()));
 
-                Map<String, Integer> detailKonsumsi = (Map<String, Integer>) current.get("detail konsumsi");
-                int nominalKonsumsi = (int) current.get("nominal konsumsi");
+                    double totalNominal = konsumsiCount.entrySet().stream()
+                            .mapToDouble(e -> e.getValue() * jenisHarga.getOrDefault(e.getKey(), 0))
+                            .sum();
 
-                for (BookingConsumption konsumsi : booking.getBookingConsumptions()) {
-                    String jenis = konsumsi.getJenisKonsumsi().getName();
-                    int peserta = booking.getParticipants();
-                    String key = jenis.toLowerCase();
+                    Map<String, Object> konsumsiDetail = konsumsiCount.entrySet().stream()
+                            .collect(Collectors.toMap(
+                                    Map.Entry::getKey,
+                                    e -> Map.of(
+                                            "jumlah", e.getValue(),
+                                            "hargaSatuan", jenisHarga.getOrDefault(e.getKey(), 0),
+                                            "total", e.getValue() * jenisHarga.getOrDefault(e.getKey(), 0))));
 
-                    detailKonsumsi.put(key, detailKonsumsi.getOrDefault(key, 0) + peserta);
+                    double avgParticipants = (double) totalParticipants / roomBookings.size();
+                    double presentasi = Math.min((avgParticipants / 100) * 100, 100.0);
 
-                    int harga = jenisHarga.getOrDefault(jenis, 0);
-                    nominalKonsumsi += peserta * harga;
-                }
+                    roomSummary.put(room, Map.of(
+                            "presentasiPemakaian", String.format("%.2f%%", presentasi),
+                            "totalNominal", totalNominal,
+                            "detailKonsumsi", konsumsiDetail));
+                });
 
-                int totalPeserta = detailKonsumsi.values().stream().mapToInt(Integer::intValue).sum();
-                int kapasitas = 100;
-                String presentase = kapasitas > 0
-                        ? String.format("%.1f%%", (totalPeserta * 100.0 / kapasitas))
-                        : "0%";
+                result.put(office, roomSummary);
+            });
 
-                current.put("presentasi pemakaian", presentase);
-                current.put("nominal konsumsi", nominalKonsumsi);
-            }
-
-            SummaryResponseDto responseDto = new SummaryResponseDto(
+            SummaryResponseDto dto = new SummaryResponseDto(
                     bookingPage.getTotalElements(),
                     limit,
                     bookingPage.getTotalPages(),
                     bookingPage.getNumber() + 1,
-                    (Map) result);
+                    result);
 
-            return Response.responseSukses(responseDto, "list summary booking");
+            return Response.create("07", "00", "Sukses list summary booking", dto);
         } catch (Exception e) {
-            return Response.responseError(null, 500, "Terjadi kesalahan server: " + e.getMessage());
+            return Response.create("07", "99", "Terjadi kesalahan server: " + e.getMessage(), null);
         }
     }
 

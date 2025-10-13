@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import com.java.meeting_room.entity.User;
+import com.java.meeting_room.entity.SysUser;
 import com.java.meeting_room.model.Authentication;
 import com.java.meeting_room.util.JwtUtils;
 import com.java.meeting_room.util.SecurityContextHolder;
@@ -32,7 +32,7 @@ public class AuthenticationFilter extends OncePerRequestFilter {
                 ObjectMapper mapper = new ObjectMapper();
                 Map map = mapper.readValue(jwt.payload(), Map.class);
                 Number id = (Number) map.get("sub");
-                User.Role role = User.Role.fromString((String) map.get("role"));
+                SysUser.Role role = SysUser.Role.fromString((String) map.get("role"));
                 Number iat = (Long) map.get("iat");
                 Number exp = (Number) map.get("exp");
                 long expiration = iat.longValue() + exp.longValue();
