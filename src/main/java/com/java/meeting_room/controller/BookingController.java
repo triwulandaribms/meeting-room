@@ -1,8 +1,10 @@
 package com.java.meeting_room.controller;
 
+import com.java.meeting_room.model.Authentication;
 import com.java.meeting_room.model.Response;
 import com.java.meeting_room.model.request.BookingReq;
 import com.java.meeting_room.service.BookingService;
+import com.java.meeting_room.util.SecurityContextHolder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,7 +17,8 @@ public class BookingController {
 
     @PostMapping("/add-booking")
     public Response<Object> addBooking(@RequestBody BookingReq req) {
-        return bookingService.addBooking(req);
+        Authentication authentication = SecurityContextHolder.getAuthentication();
+        return bookingService.addBooking(authentication, req);
     }
 
     @GetMapping("/list-summary")
@@ -23,6 +26,8 @@ public class BookingController {
             @RequestParam(required = false) String bookingDate,
             @RequestParam(required = false, defaultValue = "0") Integer offset,
             @RequestParam(required = false, defaultValue = "100") Integer limit) {
-        return bookingService.listSummaryBooking(bookingDate, offset, limit);
+
+        Authentication authentication = SecurityContextHolder.getAuthentication();
+        return bookingService.listSummaryBooking(authentication, bookingDate, offset, limit);
     }
 }

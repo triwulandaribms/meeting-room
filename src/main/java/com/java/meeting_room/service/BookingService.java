@@ -3,6 +3,8 @@ package com.java.meeting_room.service;
 import com.java.meeting_room.entity.Booking;
 import com.java.meeting_room.entity.BookingConsumption;
 import com.java.meeting_room.entity.MasterJenisKonsumsi;
+import com.java.meeting_room.entity.SysUser;
+import com.java.meeting_room.model.Authentication;
 import com.java.meeting_room.model.Response;
 import com.java.meeting_room.model.request.BookingReq;
 import com.java.meeting_room.model.request.MasterJenisKonsumsiReq;
@@ -21,7 +23,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
-public class BookingService {
+public class BookingService extends AbstractService {
 
     @Autowired
     private BookingRepository bookingRepository;
@@ -32,7 +34,8 @@ public class BookingService {
     @Autowired
     private BookingConsumptionRepository bookingConsumptionRepository;
 
-    public Response<Object> addBooking(BookingReq req) {
+    public Response<Object> addBooking(final Authentication authentication, final BookingReq req) {
+        return precondition(authentication, SysUser.Role.ADMIN, SysUser.Role.USER).orElseGet(() -> {
 
         if (req.bookingDate() == null || req.officeName() == null ||
                 req.startTime() == null || req.endTime() == null ||
@@ -98,9 +101,13 @@ public class BookingService {
         } catch (Exception e) {
             return Response.create("07", "99", "Terjadi kesalahan server: " + e.getMessage(), null);
         }
+    });
     }
 
-    public Response<Object> listSummaryBooking(String bookingDate, Integer offset, Integer limit) {
+    public Response<Object> listSummaryBooking(final Authentication authentication, final String bookingDate, Integer offset, Integer limit){
+
+        return precondition(authentication, SysUser.Role.ADMIN).orElseGet(() -> {
+
         try {
             if (bookingDate == null || bookingDate.isEmpty()) {
                 return Response.badRequest();
@@ -188,6 +195,7 @@ public class BookingService {
         } catch (Exception e) {
             return Response.create("07", "99", "Terjadi kesalahan server: " + e.getMessage(), null);
         }
+    });
     }
 
 }

@@ -1,9 +1,7 @@
 
 | **Admin/Staff** | 
-- Melihat daftar semua ruangan/office <br>
-- Tambah ruangan/office baru <br>
-- Update ruangan/office <br>
-- Hapus ruangan/office <br>
+- CRUD ruangan/office <br>
+- CRUD jenis konsumsi <br>
 - Buat booking untuk orang lain/diri sendiri
 
 | **User** | 
